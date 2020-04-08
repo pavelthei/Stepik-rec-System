@@ -1,0 +1,71 @@
+---
+title: "cosine"
+output: html_document
+---
+```{r}
+library(readr)
+library(dplyr)
+```
+
+Матрица схожести курсов
+
+Нужно добавить мешок слов
+
+```{r}
+library(tidyverse)
+courses_reviews = read_csv('~/courses_reviews.csv')
+co = courses_reviews %>%
+  select(-user, -create_date, -update_date, -text, -title, -description, -tags, -review_id)
+
+co = co %>%
+  group_by(course) %>%
+  mutate(mean_rating = mean(score))
+
+co$en = ifelse(co$language=="en", 1, 0)
+co$de = ifelse(co$language=="de", 1, 0)
+co$be = ifelse(co$language=="be", 1, 0)
+co$nl = ifelse(co$language=="nl", 1, 0)
+co$ru = ifelse(co$language=="ru", 1, 0)
+co = co %>%
+  select(-language)
+co = co %>%
+  select(-score)
+
+co = distinct(co)
+
+rownames(co) = co$course
+co = co %>% dplyr::select(-course)
+sim = lsa::cosine(t(as.matrix(co)))
+```
+
+```{r}
+sim[1:5, 1:5] %>% round(2)
+diag(sim) = 0
+```
+
+Построим content-based рекомендательную систему, которая принимает на вход id пользователя и количество рекомендуемых курсов. Если пользователь не укажет количество курсов, то система предложит ему 3 курса.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+getFilms2 = function(userId, n=3){
+user = courses_reviews %>% filter(user == userId)
+my_sim = sim[!(rownames(sim) %in% as.character(courses_reviews$course)), ]
+
+user = user %>% filter(score == 5)
+mostSimilar = head(sort(sim[,as.character(courses_reviews$course)], decreasing = T), n)
+a = which(sim[,as.character(courses_reviews$course)] %in% mostSimilar, arr.ind = TRUE)
+rows = a %% dim(sim)[1]
+result = rownames(sim)[rows]
+recommend = filter(courses_reviews,course %in% result) %>% dplyr::select(title) 
+
+
+return(recommend)
+}
+```
+
+Для демонстрации того, как работает наша система, мы рассмотрим пользователей с id = 3898 и 10502.
+
+```{r echo=FALSE, message=FALSE}
+lol = getFilms2(3898, 2)
+
+lol
+```
