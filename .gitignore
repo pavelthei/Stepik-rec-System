@@ -2,3 +2,4 @@
 *.xlsx
 *.ipynb
 .Rproj.user
+.idea
