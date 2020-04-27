@@ -9,10 +9,10 @@ transform_tf_idf <- function(courses_data, trash_freq = 0.95){
   library(tidyr)
   
   #filtering data
-  courses = courses_data %>% dplyr::select(c(id, title, summary, description)) %>% na.omit()
+  courses = courses_data %>% dplyr::select(c(id, title, description)) %>% na.omit()
   
   # combining all text columns into one
-  all_text = as.data.frame(c(str_c(courses$title, courses$summary, courses$description, sep=" ")))
+  all_text = as.data.frame(c(str_c(courses$title, courses$description, sep=" ")))
   colnames(all_text) = c("text")
   all_text$id = courses$id
   
@@ -49,6 +49,7 @@ transform_tf_idf <- function(courses_data, trash_freq = 0.95){
   # Spread the data
   all_text_tidy_tfidf = all_text_tidy_tfidf %>%
     dplyr::select(id, words, tf_idf) %>%
+    filter(!(words == "id")) %>% 
     spread(words, tf_idf, fill = 0) 
   
   return(all_text_tidy_tfidf)
