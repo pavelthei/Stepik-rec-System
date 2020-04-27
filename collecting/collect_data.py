@@ -45,6 +45,9 @@ def get_reviews(courses_id):
         info = requests.get(url+str(c_id)).json()['course-reviews']
         all_reviews.extend(info)
     reviews = pd.DataFrame(all_reviews)
+    if reviews.shape[0] == 0:
+        print("There no reviews")
+        exit()
     print(f"Collected {reviews.shape[0]} reviews")
     return reviews
 
@@ -56,9 +59,6 @@ def get_users(users_id):
         users_info.extend(info)
     users = pd.DataFrame(users_info)
     print(f"Collected info about {users.shape[0]} users")
-    if users.shape[0] == 0:
-        print("There no reviews")
-        exit()
     return users
 
 
