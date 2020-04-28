@@ -8,7 +8,7 @@ editor_options:
 
 ```{r}
 library(readr)
-courses = read_csv("path_to_dataset")
+courses2 = read_csv("path_to_dataset")
 source("~/Stepik-rec-System/cosine_feature_based/TF_IDF_Transform.r")
 aa = transform_tf_idf(courses)
 ```
