@@ -18,7 +18,10 @@ def get_courses(n_pages, features=None, start_point=1):
     constant_url = 'https://stepik.org:443/api/courses'
     courses = []
     for i in tqdm(range(start_point, n_pages + start_point+1)):
-        req = requests.get(constant_url, params={'page': i}).json()['courses']
+        try:
+            req = requests.get(constant_url, params={'page': i}).json()['courses']
+        except:
+            break
         # если словарь, то докидываем курс в список
         if req.__class__ == {}.__class__:
 
