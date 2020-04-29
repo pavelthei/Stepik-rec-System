@@ -11,6 +11,7 @@ import json
 
 # Collecting info about different courses
 def get_courses(n_pages, features=None, start_point=1):
+    logging.info("Staring collecting courses")
     if features is None:
         features = ['id', 'title', 'summary', 'description', 'is_paid', 'lessons_count']
     constant_url = 'https://stepik.org:443/api/courses'
@@ -51,6 +52,7 @@ def get_courses(n_pages, features=None, start_point=1):
 
 # Collecting info about reviews from collected courses
 def get_reviews(courses_id):
+    logging.info("Staring collecting reviews")
     cols = ["id", "course", "user", "score", "text", "create_date"]
     url = "https://stepik.org/api/course-reviews?course="
     all_reviews = []
@@ -70,6 +72,7 @@ def get_reviews(courses_id):
 
 # Collecting info about users from collected reviews
 def get_users(users_id):
+    logging.info("Staring collecting users")
     cols = ["id", "full_name", "is_active", "avatar", "level", "level_title", "knowledge", "knowledge_rank",
             "reputation", "reputation_rank", "join_date", "social_profiles", "solved_steps_count",
             "created_courses_count", "created_lessons_count", "issued_certificates_count", "followers_count"]
@@ -88,12 +91,14 @@ def insert_data(data, table):
     cols = list(data.columns)
     data = [tuple(x) for x in data.to_numpy()]
 
+    logging.info("Starting inserting {table}: {n} items".format(table=table, n=len(data)))
+
     # insert connection info by yourself
     conn = psycopg2.connect(
-        host='host',
-        user='user',
-        password='password',
-        database='database')
+        host='stepik-bd.c2hf8kenf8dw.us-east-1.rds.amazonaws.com',
+        user='stepik_master',
+        password='Stepikpa$$word',
+        database='stepik_api')
 
     # cursor = conn.cursor()
     query: str = "INSERT INTO {table} ({columns}) VALUES ({values}) " \
@@ -107,6 +112,7 @@ def insert_data(data, table):
 
     cursor.close()
     conn.close()
+    logging.info("Finished inserting")
 
 
 if __name__ == '__main__':
@@ -134,7 +140,7 @@ if __name__ == '__main__':
             json.dump(ch_val, write_file)
     else:
         start = 1
-        ch_val = {'start': 1}
+        ch_val = {'start': 1 + n_courses}
         with open('changing_values.json', 'w') as write_file:
             json.dump(ch_val, write_file)
 
