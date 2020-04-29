@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 import os
 import json
+import time
 
 
 # Collecting info about different courses
@@ -116,46 +117,52 @@ def insert_data(data, table):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--n_courses",
-                        help="number of courses to check during running the script, less number could be collected",
-                        type=int)
+    while True:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-n", "--n_courses",
+                            help="number of courses to check during running the script, less number could be collected",
+                            type=int)
 
-    args = parser.parse_args()
-    n_courses = args.n_courses
+        args = parser.parse_args()
+        n_courses = args.n_courses
 
-    columns = ['id', 'title', 'target_audience', 'is_certificate_issued',
-               'description', 'authors', 'schedule_type', 'learners_count', 'quizzes_count', 'time_to_complete',
-               'language']
+        columns = ['id', 'title', 'target_audience', 'is_certificate_issued',
+                   'description', 'authors', 'schedule_type', 'learners_count', 'quizzes_count', 'time_to_complete',
+                   'language']
 
-    logging.basicConfig(filename="collecting.log", level=logging.INFO)
-    logging.info("START CIRCLE\n----------\n{date:%Y-%m-%d %H:%M:%S}\n----------".format(date=datetime.now()))
+        logging.basicConfig(filename="collecting.log", level=logging.INFO)
+        logging.info("\n\nSTART CIRCLE\n----------\n{date:%Y-%m-%d %H:%M:%S}\n----------".format(date=datetime.now()))
+        print("\n\nSTART CIRCLE\n----------\n{date:%Y-%m-%d %H:%M:%S}\n----------".format(date=datetime.now()))
+        if os.path.exists("changing_values.json"):
+            with open('changing_values.json', 'r') as read_file:
+                ch_val = json.loads(read_file.read())
+            start = ch_val['start']
+            ch_val['start'] += n_courses
+            with open('changing_values.json', 'w') as write_file:
+                json.dump(ch_val, write_file)
+        else:
+            start = 1
+            ch_val = {'start': 1 + n_courses}
+            with open('changing_values.json', 'w') as write_file:
+                json.dump(ch_val, write_file)
 
-    if os.path.exists("changing_values.json"):
-        with open('changing_values.json', 'r') as read_file:
-            ch_val = json.loads(read_file.read())
-        start = ch_val['start']
-        ch_val['start'] += n_courses
-        with open('changing_values.json', 'w') as write_file:
-            json.dump(ch_val, write_file)
-    else:
-        start = 1
-        ch_val = {'start': 1 + n_courses}
-        with open('changing_values.json', 'w') as write_file:
-            json.dump(ch_val, write_file)
+        logging.info("START PAGE: {page}".format(page=start))
+        print("START PAGE: {page}".format(page=start))
+        print("Check courses:")
+        courses = get_courses(n_courses, features=columns, start_point=start)
+        print("Inserting courses to database")
+        insert_data(courses, table="courses")
 
-    print("Check courses:")
-    courses = get_courses(n_courses, features=columns, start_point=start)
-    print("Inserting courses to database")
-    insert_data(courses, table="courses")
+        print("Check reviews")
+        reviews = get_reviews(courses.id)
+        print("Inserting reviews to database")
+        insert_data(reviews, table="reviews")
 
-    print("Check reviews")
-    reviews = get_reviews(courses.id)
-    print("Inserting reviews to database")
-    insert_data(reviews, table="reviews")
-
-    print("Check users")
-    users = get_users(reviews.user_id)
-    print("Inserting users to database")
-    insert_data(users, table="users")
-    logging.info("FINISH CIRCLE\n----------\n{date:%Y-%m-%d %H:%M:%S}\n----------".format(date=datetime.now()))
+        print("Check users")
+        users = get_users(reviews.user_id)
+        print("Inserting users to database")
+        insert_data(users, table="users")
+        logging.info("FINISH CIRCLE\n----------\n{date:%Y-%m-%d %H:%M:%S}\n----------".format(date=datetime.now()))
+        print("Sleeping for 3 hours from {date:%Y-%m-%d %H:%M:%S}".format(date=datetime.now()))
+        logging.info("Now sleeping 3 hours")
+        time.sleep(10800)
