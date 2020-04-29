@@ -117,20 +117,21 @@ def insert_data(data, table):
 
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-n", "--n_courses",
+                        help="number of courses to check during running the script, less number could be collected",
+                        type=int)
+
+    args = parser.parse_args()
+    n_courses = args.n_courses
+
+    columns = ['id', 'title', 'target_audience', 'is_certificate_issued',
+               'description', 'authors', 'schedule_type', 'learners_count', 'quizzes_count', 'time_to_complete',
+               'language']
+
+    logging.basicConfig(filename="collecting.log", level=logging.INFO)
     while True:
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-n", "--n_courses",
-                            help="number of courses to check during running the script, less number could be collected",
-                            type=int)
-
-        args = parser.parse_args()
-        n_courses = args.n_courses
-
-        columns = ['id', 'title', 'target_audience', 'is_certificate_issued',
-                   'description', 'authors', 'schedule_type', 'learners_count', 'quizzes_count', 'time_to_complete',
-                   'language']
-
-        logging.basicConfig(filename="collecting.log", level=logging.INFO)
         logging.info("\n\nSTART CIRCLE\n----------\n{date:%Y-%m-%d %H:%M:%S}\n----------".format(date=datetime.now()))
         print("\n\nSTART CIRCLE\n----------\n{date:%Y-%m-%d %H:%M:%S}\n----------".format(date=datetime.now()))
         if os.path.exists("changing_values.json"):
