@@ -18,6 +18,8 @@ def get_courses(n_pages, features=None, start_point=1):
     constant_url = 'https://stepik.org:443/api/courses'
     courses = []
     for i in tqdm(range(start_point, n_pages + start_point+1)):
+        if i % 100 == 0:
+            time.sleep(10)
         try:
             req = requests.get(constant_url, params={'page': i}).json()['courses']
         except:
@@ -63,6 +65,8 @@ def get_reviews(courses_id):
     for c_id in tqdm(courses_id):
         info = requests.get(url + str(c_id)).json()['course-reviews']
         all_reviews.extend(info)
+        if len(all_reviews) % 100 == 0:
+            time.sleep(10)
     reviews = pd.DataFrame(all_reviews)[cols]
     reviews.columns = ["id", "course_id", "user_id", "score", "text", "create_date"]
     if reviews.shape[0] == 0:
@@ -84,6 +88,8 @@ def get_users(users_id):
     for user_id in tqdm(set(users_id)):
         info = requests.get(f"https://stepik.org/api/users/{user_id}").json()['users']
         users_info.extend(info)
+        if len(users_info) % 100 == 0:
+            time.sleep(10)
     users = pd.DataFrame(users_info)[cols]
     print(f"Collected info about {users.shape[0]} users")
     logging.info(f"Collected info about {users.shape[0]} users")
@@ -103,6 +109,8 @@ def insert_data(data, table):
         user='stepik_master',
         password='Stepikpa$$word',
         database='stepik_api')
+
+    "INSERT INTO courses (id, title, description) VALUES (%s, %s, %s)"
 
     # cursor = conn.cursor()
     query: str = "INSERT INTO {table} ({columns}) VALUES ({values}) " \
@@ -131,24 +139,25 @@ if __name__ == '__main__':
 
     columns = ['id', 'title', 'target_audience', 'is_certificate_issued',
                'description', 'authors', 'schedule_type', 'learners_count', 'quizzes_count', 'time_to_complete',
-               'language']
+               'language', 'is_paid']
 
     logging.basicConfig(filename="collecting.log", level=logging.INFO)
     while True:
         logging.info("\n\nSTART CIRCLE\n----------\n{date:%Y-%m-%d %H:%M:%S}\n----------".format(date=datetime.now()))
         print("\n\nSTART CIRCLE\n----------\n{date:%Y-%m-%d %H:%M:%S}\n----------".format(date=datetime.now()))
-        if os.path.exists("changing_values.json"):
-            with open('changing_values.json', 'r') as read_file:
-                ch_val = json.loads(read_file.read())
-            start = ch_val['start']
-            ch_val['start'] += n_courses
-            with open('changing_values.json', 'w') as write_file:
-                json.dump(ch_val, write_file)
-        else:
-            start = 1
-            ch_val = {'start': 1 + n_courses}
-            with open('changing_values.json', 'w') as write_file:
-                json.dump(ch_val, write_file)
+        # if os.path.exists("changing_values.json"):
+        #     with open('changing_values.json', 'r') as read_file:
+        #         ch_val = json.loads(read_file.read())
+        #     start = ch_val['start']
+        #     ch_val['start'] += n_courses
+        #     with open('changing_values.json', 'w') as write_file:
+        #         json.dump(ch_val, write_file)
+        # else:
+        #     start = 1
+        #     ch_val = {'start': 1 + n_courses}
+        #     with open('changing_values.json', 'w') as write_file:
+        #         json.dump(ch_val, write_file)
+        start = 1
 
         logging.info("START PAGE: {page}".format(page=start))
         print("START PAGE: {page}".format(page=start))
@@ -167,6 +176,6 @@ if __name__ == '__main__':
         print("Inserting users to database")
         insert_data(users, table="users")
         logging.info("FINISH CIRCLE\n----------\n{date:%Y-%m-%d %H:%M:%S}\n----------".format(date=datetime.now()))
-        print("Sleeping for 3 hours from {date:%Y-%m-%d %H:%M:%S}".format(date=datetime.now()))
-        logging.info("Now sleeping 3 hours")
-        time.sleep(10800)
+        print("Sleeping for 24 hours from {date:%Y-%m-%d %H:%M:%S}".format(date=datetime.now()))
+        logging.info("Now sleeping 24 hours")
+        time.sleep(86400)
