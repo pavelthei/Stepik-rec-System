@@ -1,0 +1,119 @@
+---
+title: "UB_IB_prep"
+output: html_document
+---
+
+```{r}
+# libraries
+
+library(dplyr)
+library(tidyverse)
+library(tidyr)
+library(recommenderlab)
+library(ggplot2)
+```
+
+```{r}
+# connection and getting data
+
+require("RPostgreSQL")
+
+ 
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = 'stepik_api',
+                 host = 'stepik-bd.c2hf8kenf8dw.us-east-1.rds.amazonaws.com', port = 5432,
+                 user = 'stepik_master', password = 'Stepikpa$$word')
+on.exit(dbDisconnect(con))
+
+
+courses <- dbGetQuery(con, "SELECT id, title from courses")
+reviews <- dbGetQuery(con, "SELECT course_id, user_id, score from reviews") 
+```
+
+```{r}
+# spreading initial dataframe with reviews
+
+rev = spread(reviews, key = course_id, value = score)
+rev = as.data.frame(rev)
+rownames(rev) = rev$user_id
+rev = rev %>% dplyr::select(-user_id)
+a = rev[1:10, 1:10]
+```
+
+
+```{r}
+# transforming rating to another format
+
+rev = as.matrix(rev)
+rev2 = as(rev, "realRatingMatrix")
+
+head(rowCounts(rev2))
+head(rowMeans(rev2))
+```
+
+
+```{r}
+# analyzing situation
+
+ggplot(data = data.frame(course_rate=colCounts(rev2))) + geom_histogram(aes(x=course_rate))
+ggplot(data = data.frame(user_rate=rowCounts(rev2))) + geom_histogram(aes(x=user_rate))
+
+# everything is bad
+```
+
+```{r}
+# try to filter data
+a = rev2[rowCounts(rev2) > 2, colCounts(rev2) > 5]
+```
+
+```{r}
+# separate data to train/test
+
+set.seed(100)
+test_ind <- sample(1:nrow(a), size = nrow(a)*0.2)
+a_train <- a[-test_ind, ]
+a_test <- a[test_ind, ]
+```
+
+
+
+```{r}
+# creating model
+
+recc_model <- Recommender(data = a_train, method = "IBCF", parameter = list(k = 30))
+recc_model
+```
+
+```{r}
+# predicting 
+predicted <- predict(object = recc_model, newdata = a_test, n = 6)
+
+for (i in 1:38){
+course_ids = predicted@itemLabels[predicted@items[[i]]]
+print(length(course_ids))
+}
+
+
+predicted@itemLabels[[2]]
+```
+
+```{r}
+# saving model
+
+UB_IB_Model = Recommender(data = a, method = "IBCF", parameter = list(k = 30))
+saveRDS(UB_IB_Model, file='UB_IB_Model.rda')
+```
+
+
+```{r}
+#test load model
+model = readRDS(file='UB_IB_Model.rda')
+predicted2 <- predict(object = model, newdata = a_test, n = 6)
+```
+
+```{r}
+# test function
+source("~/Stepik-rec-System/UB_IB/UB_IB_recommender.R")
+UB_IB_recommender(38857580, n_rec = 7)
+```
+
