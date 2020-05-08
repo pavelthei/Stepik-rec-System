@@ -1,0 +1,145 @@
+---
+title: "cosine+feature_based"
+output: html_document
+---
+
+```{r}
+library(readr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+```
+
+Достаем данные по курсам
+
+```{r}
+require("RPostgreSQL")
+pw <- {
+  'Stepikpa$$word'
+}
+ 
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = 'stepik_api',
+                 host = 'stepik-bd.c2hf8kenf8dw.us-east-1.rds.amazonaws.com', port = 5432,
+                 user = 'stepik_master', password = pw)
+rm(pw)
+courses <- dbGetQuery(con, "SELECT * from courses")
+```
+
+Обрабатываем данные + создаем матрицу косинусных расстояний
+
+```{r}
+co2 = courses %>%
+  select(id, is_certificate_issued, description, schedule_type, learners_count, quizzes_count, time_to_complete, language, title, is_paid)
+
+# Language
+co2$en = ifelse(co2$language=="en", 1, 0)
+co2$ru = ifelse(co2$language=="ru", 1, 0)
+co2 = co2 %>%
+  select(-language)
+
+# Schedule type
+co2$schedule_type = as.factor(co2$schedule_type)
+co2$sched_upcoming = ifelse(co2$schedule_type=='upcoming', 1, 0)
+co2$sched_self_paced = ifelse(co2$schedule_type=='self_paced', 1, 0)
+co2$sched_ended = ifelse(co2$schedule_type=='ended', 1, 0)
+co2$sched_active = ifelse(co2$schedule_type=='active', 1, 0)
+co2 = co2 %>%
+  select(-schedule_type)
+
+# Description
+co2$description = str_replace_all(co2$description, "[a-z]", "")
+co2$description = str_replace_all(co2$description, "[[:punct:]]", "")
+co2$description = str_replace_all(co2$description, "<>", "")
+
+# Getting TF-IDF
+source("~/Stepik-rec-System/cosine_feature_based/TF_IDF_Transform.r")
+
+aa = transform_tf_idf(co2)
+aa = distinct(aa)
+co2 = co2 %>%
+  select(-description, -title)
+
+new_co = left_join(aa, co2, by = 'id')
+
+# Making cosine matrix
+rownames(new_co) = new_co$id
+co = new_co %>% dplyr::select(-id)
+sim2 = lsa::cosine(t(as.matrix(co)))
+diag(sim2) = 0
+```
+
+```{r}
+sim2[1:10, 1:10] %>% round(5)
+```
+
+```{r}
+# пусть чувак ввел курс с id 73
+try1 = courses %>%
+  filter(id==73)
+try1$id
+```
+
+Ищем курсы, похожие на курс 43 'Введене в Linux'
+```{r}
+mostSimilar2 = max(sim2[,as.character(try1$id)], na.rm = T)
+a2 = which(sim2[,as.character(try1$id)] == mostSimilar2, arr.ind = TRUE)
+sim_film =names(a2)
+```
+
+```{r}
+filter(courses, id== sim_film) %>% select(title)
+```
+
+```{r}
+mostSimilar3 = head(sort(sim2[,as.character(try1$id)], decreasing = T), n = 3)
+sim_films = names(mostSimilar3)
+```
+
+```{r}
+filter(courses,id %in% sim_films) %>% 
+  mutate (similarity = mostSimilar3) %>%
+  dplyr::select(title, id, similarity)
+```
+
+Что если вводит несколько id курсов?
+```{r}
+many_courses = c(43, 73, 2480)
+what = filter(courses,id %in% many_courses)
+```
+
+```{r}
+mostSimilar4 = head(sort(sim2[,as.character(what$id)], decreasing = T), n = 5)
+a4 = which(sim2[,as.character(what$id)] %in% mostSimilar4, arr.ind = TRUE)
+names(a4)
+rows4 = a4 %% dim(sim2)[1]
+rows4
+result4 = rownames(sim2)[rows4] #id of films
+result4
+filter(courses,id %in% result4) %>% dplyr::select(title, id)
+```
+
+Функция БЕЗ холодного старта - надо продумать как ее вфигачить внутрь
+Написать, что если вы не проходили курсы, то введите 0
+```{r}
+coursesId = c(0)
+getCourses = function(coursesId, n){
+  cours = filter(courses,id %in% coursesId)
+  
+  if (nrow(cours)==0) {
+    recommend = "Python" # пока так, чтобы не удалять условие
+  } else {
+    mostSimilar = head(sort(sim2[,as.character(cours$id)], decreasing = T), n)
+    a = which(sim2[,as.character(cours$id)] %in% mostSimilar, arr.ind = TRUE)
+    rows = a %% dim(sim2)[1]
+    result = rownames(sim2)[rows]
+    recommend = filter(courses,id %in% result) %>% dplyr::select(title)
+  }
+  
+  return(recommend)
+}
+```
+
+```{r}
+getCourses(c(0), 3)
+```
