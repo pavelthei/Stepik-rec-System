@@ -20,6 +20,7 @@ cosine <- function(courses_data){
   # Managing data
   co2 = courses %>%
     select(id, is_certificate_issued, description, schedule_type, learners_count, quizzes_count, time_to_complete, language, title, is_paid)
+  co2[5:7] = scale(co2[,5:7])
   # Language
   co2$en = ifelse(co2$language=="en", 1, 0)
   co2$ru = ifelse(co2$language=="ru", 1, 0)
