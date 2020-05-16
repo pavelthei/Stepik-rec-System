@@ -1,5 +1,5 @@
 
-lda_clust <- function(id_course){
+lda_clust <- function(id_course, show_title = TRUE){
 
 library(RPostgreSQL)
 library(stopwords)
@@ -7,6 +7,10 @@ library(topicmodels)
 library(tm)
 library(tidytext)
 library(reshape2)
+library(dplyr)
+library(readr)
+library(stringr)
+library(stopwords)
 
 #Create connection
 pw <- {
@@ -20,10 +24,10 @@ con <- dbConnect(drv, dbname = 'stepik_api',
 rm(pw)
 
 #Download course information
-courses_sample  <- dbGetQuery(con, paste("SELECT * FROM courses WHERE id =", 71155))
+courses_sample  <- dbGetQuery(con, paste("SELECT * FROM courses WHERE id =", id_course))
 
-load("/home/yurii/Документы/Ucheba/stepik_project/LDA/lda.Rdata")
-id_topic = read.csv("/home/yurii/Документы/Ucheba/stepik_project/LDA/id_topics.csv")
+load("lda.Rdata")
+id_topic = read.csv("id_topics.csv")
 
 courses_sample = courses_sample %>% dplyr::select(c(id, title, description)) %>% na.omit()
 
@@ -34,7 +38,7 @@ all_text$id = courses_sample$id
 all_text$text = all_text$text %>% str_to_lower() %>% str_replace_all("<(.*?)>", "") %>%  
   str_replace_all("[^A-Za-z0-9а-яА-Я+#ёЁйЙ -]+", " ") %>% str_squish()
 
-all_text$lem = system2("/home/yurii/snap/mystem-3.1-linux-64bit/mystem", c("-c", "-l", "-d"), input=all_text$text, stdout=TRUE) %>% str_to_lower() %>% 
+all_text$lem = system2("mystem", c("-c", "-l", "-d"), input=all_text$text, stdout=TRUE) %>% str_to_lower() %>% 
   str_replace_all("<(.*?)>", "") %>%  
   str_replace_all("[^A-Za-z0-9а-яА-Я+#ёЁйЙ -]+", " ") %>% str_squish()
 
@@ -45,9 +49,17 @@ dtm <- DocumentTermMatrix(corpus)
 result <- posterior(ap_lda, dtm)
 result <- apply(result$topics, 1, which.max)
 
+if (show_title == TRUE){
 courses_recomend <- id_topic %>%
   filter(topics == result) %>%
+  select(id, title) %>%
+  head() 
+} else {
+  courses_recomend <- id_topic %>%
+    filter(topics == result) %>%
+    select(id) %>%
   head()
+}
 
 return(courses_recomend)
 

@@ -3,7 +3,7 @@
 library(topicmodels)
 library(tm)
   
-courses = courses %>% dplyr::select(c(id, title, description)) %>% na.omit()
+courses = courses_sample %>% dplyr::select(c(id, title, description)) %>% na.omit()
 
 all_text = as.data.frame(c(str_c(courses$title, courses$description, sep=" ")))
 colnames(all_text) = c("text")
@@ -50,4 +50,6 @@ ap_top_terms %>%
 ap_topics
 
 save(ap_lda,file = "/home/yurii/Документы/Ucheba/stepik_project/LDA/lda.Rdata")
-predict(ap_lda, courses_sample)
+courses_sample$topics <- topics(ap_lda)
+courses_sample <- select(courses_sample, id, title, topics)
+write.csv(courses_sample,"/home/yurii/Документы/Ucheba/stepik_project/LDA_func/id_topics.csv")
