@@ -1,4 +1,5 @@
-getCourses <- function(coursesId, n){
+getCourses <- function(coursesId, n, path_to_matrix){
+  cours = as.matrix(read.table(path_to_matrix))
   cours = filter(courses,id %in% coursesId)
   
   if (nrow(cours)==0) {

@@ -1,4 +1,4 @@
-cosine <- function(courses_data){
+cosine <- function(path_to_save="./"){
   library(readr)
   library(dplyr)
   library(stringr)
@@ -52,5 +52,10 @@ cosine <- function(courses_data){
   co = new_co %>% dplyr::select(-id)
   sim2 = lsa::cosine(t(as.matrix(co)))
   diag(sim2) = 0
+  write.table(sim2, paste(path_to_save, 'cosine_matrix.txt'))
   
 }
+
+
+cosine("~/Stepik-rec-System/cosine_feature_based/")
+
