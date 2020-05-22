@@ -1,0 +1,139 @@
+---
+title: "lda_trials"
+output: html_document
+---
+
+```{r}
+library(readr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(topicmodels)
+library(tm)
+library(tidytext)
+library(reshape2)
+```
+
+Достаем данные по курсам
+
+```{r}
+require("RPostgreSQL")
+pw <- {
+  'Stepikpa$$word'
+}
+ 
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = 'stepik_api',
+                 host = 'stepik-bd.c2hf8kenf8dw.us-east-1.rds.amazonaws.com', port = 5432,
+                 user = 'stepik_master', password = pw)
+rm(pw)
+courses <- dbGetQuery(con, "SELECT * from courses")
+```
+
+Разбиваем на кластеры с помощью LDA. Токен- одно слово.
+
+```{r}
+course = courses %>% dplyr::select(c(id, title, description)) %>% na.omit()
+
+all_text = as.data.frame(c(str_c(course$title, course$description, sep=" ")))
+colnames(all_text) = c("text")
+all_text$id = courses$id
+
+all_text$text = all_text$text %>% str_to_lower() %>% str_replace_all("<(.*?)>", "") %>%  
+  str_replace_all("[^A-Za-z0-9а-яА-Я+#ёЁйЙ -]+", " ") %>% str_squish()
+
+all_text$lem = system2("mystem", c("-c", "-l", "-d"), input=all_text$text, stdout=TRUE) %>% str_to_lower() %>% 
+  str_replace_all("<(.*?)>", "") %>%  
+  str_replace_all("[^A-Za-z0-9а-яА-Я+#ёЁйЙ -]+", " ") %>% str_squish()
+
+corpus<-Corpus(VectorSource(all_text2$bi_new))
+
+dtm <- DocumentTermMatrix(corpus, control = list(stopwords = c(stopwords("ru"),stopwords("en"),"will","основной","основа","обучение","весь","учебный","школа","класс","мочь", "type","types","тип", "can", "com", "это","наставник","тест","вуз","наш","каждый","курс","http","https","язык","org","свой","задача","course","также","урок","работа","тема","stepik","модуль","задание","который")))
+
+ap_lda <- LDA(dtm, k = 10, control = list(seed = 1234))
+
+ap_topics <- tidytext::tidy(ap_lda, matrix = "beta")
+
+ap_top_terms <- ap_topics %>%
+  group_by(topic) %>%
+  top_n(15, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+
+# Most frequent words
+ap_top_terms %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip() +
+  scale_x_reordered()
+
+course2 = courses
+course2$topic <- topics(ap_lda)
+
+course2 %>%
+  filter(topic == 1)
+course2 %>%
+  filter(topic == 2)
+course2 %>%
+  filter(topic == 3)
+```
+
+Видим, что алгоритм относит к одному классу не соотносящиеся курсы, например, язык программирования Python и русский язык.
+
+Пробуем разбивать по биграммам
+
+```{r}
+course3 = courses %>% dplyr::select(c(id, title, description)) %>% na.omit()
+
+all_text2 = as.data.frame(c(str_c(course3$title, course3$description, sep=" ")))
+colnames(all_text2) = c("text")
+all_text2$id = courses$id
+
+all_text2$text = all_text2$text %>% str_to_lower() %>% str_replace_all("<(.*?)>", "") %>%  
+  str_replace_all("[^A-Za-z0-9а-яА-Я+#ёЁйЙ -]+", " ") %>% str_squish()
+
+all_text2$lem = system2("mystem", c("-c", "-l", "-d"), input=all_text2$text, stdout=TRUE) %>% str_to_lower() %>% 
+  str_replace_all("<(.*?)>", "") %>%  
+  str_replace_all("[^A-Za-z0-9а-яА-Я+#ёЁйЙ -]+", " ") %>% str_squish()
+
+stopwords = c(stopwords("ru"),stopwords("en"),"основной","основа","обучение","весь","учебный","школа","класс","мочь", "type","types","тип", "can", "com", "это","наставник","тест","вуз","наш","каждый","курс","http","https","язык","org","свой","задача","course","также","урок","работа","тема","stepik","модуль","задание","который")
+
+all_text2 = all_text2 %>%
+  unnest_tokens(bigram, `lem`, token = "ngrams", n = 2)
+
+all_text2 = all_text2 %>% separate(bigram, c("word1", "word2"), sep = " ") %>% dplyr::filter(!word1 %in% stopwords) %>% dplyr::filter(!word2 %in% stopwords) 
+all_text2 = all_text2 %>% unite(bigram, word1, word2, sep = " ")
+
+all_text2$bi_new = str_replace_all(all_text2$bigram, " ", "_")
+result <- aggregate(bi_new ~ id, data = all_text2, paste, collapse = " ")
+
+all_text3 = left_join(result, all_text2)
+all_text3$test=nchar(all_text3$bi_new)
+all_text3 = all_text3[!all_text3$test<10,]
+all_text3$test<-NULL
+
+corpus2<-Corpus(VectorSource(all_text3$bi_new))
+dtm2 <- DocumentTermMatrix(corpus2)
+ap_lda2 <- LDA(dtm2, k = 10, control = list(seed = 1234))
+
+course4 = courses %>%
+  filter(id %in% all_text3$id)
+course4$topic <- topics(ap_lda2)
+
+all_text3$topics <- topics(ap_lda2)
+cou = left_join(courses, all_text3)
+
+cou %>%
+  filter(topics == 1) %>%
+  select(title)
+cou %>%
+  filter(topics == 2) %>%
+  select(title)
+cou %>%
+  filter(topics == 3) %>%
+  select(title)
+```
+
+Алгоритм все еще работает плохо. Делаем вывод о том, что алгоритм LDA не очень подходит нам для задачи разбиения на кластеры.
