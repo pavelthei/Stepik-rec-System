@@ -1,0 +1,104 @@
+---
+title: "cosine_final"
+output: html_document
+---
+
+```{r}
+library(readr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+```
+
+Достаем данные по курсам
+
+```{r}
+require("RPostgreSQL")
+pw <- {
+  'Stepikpa$$word'
+}
+ 
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = 'stepik_api',
+                 host = 'stepik-bd.c2hf8kenf8dw.us-east-1.rds.amazonaws.com', port = 5432,
+                 user = 'stepik_master', password = pw)
+rm(pw)
+courses <- dbGetQuery(con, "SELECT * from courses")
+```
+
+Обрабатываем данные + создаем матрицу косинусных расстояний
+
+```{r}
+co2 = courses %>%
+  select(id, is_certificate_issued, description, schedule_type, learners_count, quizzes_count, time_to_complete, language, title)
+
+#  Всё, что ниже- авторы, пока решила не убирать
+
+library(qdap)
+#co2$author1 = beg2char(co2$authors, ",", 1)
+#co2$nextt = char2end(co2$authors, ",", 1)
+#co2$author2 = beg2char(co2$nextt, ",", 1)
+#co2$last = char2end(co2$nextt, ",", 1)
+#co2$author3 = beg2char(co2$last, ",", 1)
+#co2 = co2 %>%
+  #select(-nextt, -last)
+
+#co2$aut2 = ifelse(co2$author1==co2$author2, NA, co2$author2)
+#co2$aut25 = ifelse(co2$author2==co2$author3, NA, co2$author3)
+#co2$aut3 = ifelse(co2$author1==co2$aut25, NA, co2$author3)
+#co2 = co2 %>%
+  #select(-author2, -author3, -aut25)
+#co2$author2 = co2$aut2
+#co2$author3 = co2$aut3
+#co2 = co2 %>%
+  #select(-aut2, -aut3)
+
+#co2$author1 = str_replace_all(co2$author1, "[[:punct:]]", "")
+#co2$author2 = str_replace_all(co2$author2, "[[:punct:]]", "")
+#co2$author3 = str_replace_all(co2$author3, "[[:punct:]]", "")
+#co2 = co2 %>%
+  #select(-authors)
+#co = co %>%
+  #group_by(course) %>%
+  #mutate(mean_rating = mean(score))
+
+# Language
+co2$en = ifelse(co2$language=="en", 1, 0)
+co2$ru = ifelse(co2$language=="ru", 1, 0)
+co2 = co2 %>%
+  select(-language)
+
+# Schedule type
+co2$schedule_type = as.factor(co2$schedule_type)
+co2$sched_upcoming = ifelse(co2$schedule_type=='upcoming', 1, 0)
+co2$sched_self_paced = ifelse(co2$schedule_type=='self_paced', 1, 0)
+co2$sched_ended = ifelse(co2$schedule_type=='ended', 1, 0)
+co2$sched_active = ifelse(co2$schedule_type=='active', 1, 0)
+co2 = co2 %>%
+  select(-schedule_type)
+
+# Description
+co2$description = str_replace_all(co2$description, "[a-z]", "")
+co2$description = str_replace_all(co2$description, "[[:punct:]]", "")
+co2$description = str_replace_all(co2$description, "<>", "")
+
+# Getting TF-IDF
+source("~/Stepik-rec-System/cosine_feature_based/TF_IDF_Transform.r")
+
+aa = transform_tf_idf(co2)
+aa = distinct(aa)
+co2 = co2 %>%
+  select(-description, -title)
+
+new_co = left_join(aa, co2, by = 'id')
+
+# Making cosine matrix
+rownames(new_co) = new_co$id
+co = new_co %>% dplyr::select(-id)
+sim = lsa::cosine(t(as.matrix(co)))
+diag(sim) = 0
+```
+
+```{r}
+sim[1:10, 1:10] %>% round(5)
+```

@@ -1,0 +1,138 @@
+---
+title: "cosine"
+output: html_document
+---
+```{r}
+library(readr)
+library(dplyr)
+library(stringr)
+```
+
+Матрица схожести курсов
+
+Нужно добавить мешок слов
+
+```{r}
+library(tidyverse)
+courses = read_csv('~/courses (1).csv')
+co2 = courses %>%
+  select(id, target_audience, is_certificate_issued, description, authors, schedule_type, learners_count, quizzes_count, time_to_complete, language, title)
+
+library(qdap)
+co2$author1 = beg2char(co2$authors, ",", 1)
+co2$nextt = char2end(co2$authors, ",", 1)
+co2$author2 = beg2char(co2$nextt, ",", 1)
+co2$last = char2end(co2$nextt, ",", 1)
+co2$author3 = beg2char(co2$last, ",", 1)
+co2 = co2 %>%
+  select(-nextt, -last)
+
+co2$aut2 = ifelse(co2$author1==co2$author2, NA, co2$author2)
+co2$aut25 = ifelse(co2$author2==co2$author3, NA, co2$author3)
+co2$aut3 = ifelse(co2$author1==co2$aut25, NA, co2$author3)
+co2 = co2 %>%
+  select(-author2, -author3, -aut25)
+co2$author2 = co2$aut2
+co2$author3 = co2$aut3
+co2 = co2 %>%
+  select(-aut2, -aut3)
+
+co2$author1 = str_replace_all(co2$author1, "[[:punct:]]", "")
+co2$author2 = str_replace_all(co2$author2, "[[:punct:]]", "")
+co2$author3 = str_replace_all(co2$author3, "[[:punct:]]", "")
+co2 = co2 %>%
+  select(-authors)
+#co = co %>%
+  #group_by(course) %>%
+  #mutate(mean_rating = mean(score))
+
+co2$en = ifelse(co2$language=="en", 1, 0)
+co2$ru = ifelse(co2$language=="ru", 1, 0)
+co2 = co2 %>%
+  select(-language)
+
+co2$schedule_type = as.factor(co2$schedule_type)
+co2$sched_upcoming = ifelse(co2$schedule_type=='upcoming', 1, 0)
+co2$sched_self_paced = ifelse(co2$schedule_type=='self_paced', 1, 0)
+co2$sched_ended = ifelse(co2$schedule_type=='ended', 1, 0)
+co2$sched_active = ifelse(co2$schedule_type=='active', 1, 0)
+co2 = co2 %>%
+  select(-schedule_type)
+
+co2$description = str_replace_all(co2$description, "[a-z]", "")
+co2$description = str_replace_all(co2$description, "[[:punct:]]", "")
+co2$description = str_replace_all(co2$description, "<>", "")
+
+#достать для текстов
+source("~/Stepik-rec-System/cosine_feature_based/TF_IDF_Transform.r")
+courses = co2 %>%
+  select(target_audience, description, title)
+
+aa = transform_tf_idf(co2)
+aa$id
+aa = distinct(aa)
+co2 = co2 %>%
+  select(-description, -title, -target_audience)
+co2$author1 = as.factor(co2$author1)
+co2$author1 = as.numeric(co2$author1)
+co2$author2 = as.factor(co2$author2)
+co2$author3 = as.factor(co2$author3)
+co2 = co2 %>%
+  select(-author1, - author2, -author3)
+new_co = left_join(aa, co2, by = 'id')
+
+rownames(new_co) = new_co$id
+co = new_co %>% dplyr::select(-id)
+sim = lsa::cosine(t(as.matrix(co)))
+```
+
+```{r}
+sim[1:10, 1:10] %>% round(5)
+diag(sim) = 0
+```
+
+Построим content-based рекомендательную систему, которая принимает на вход id пользователя и количество рекомендуемых курсов. Если пользователь не укажет количество курсов, то система предложит ему 3 курса.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+getFilms2 = function(userId, n=3){
+user = courses_reviews %>% filter(user == userId)
+my_sim = sim[!(rownames(sim) %in% as.character(courses_reviews$course)), ]
+
+user = user %>% filter(score == 5)
+mostSimilar = head(sort(sim[,as.character(courses_reviews$course)], decreasing = T), n)
+a = which(sim[,as.character(courses_reviews$course)] %in% mostSimilar, arr.ind = TRUE)
+rows = a %% dim(sim)[1]
+result = rownames(sim)[rows]
+recommend = filter(courses_reviews,course %in% result) %>% dplyr::select(title) 
+
+
+return(recommend)
+}
+```
+
+Для демонстрации того, как работает наша система, мы рассмотрим пользователей с id = 3898 и 10502.
+
+```{r echo=FALSE, message=FALSE}
+lol = getFilms2(3898, 2)
+
+lol
+```
+
+```{r}
+co = co[,c(1,3,4,5,2,6,7,8,9,10)]
+scaledCo <- scale(co[,1:4])
+hc.average=hclust(dist(scaledCo), method="average")
+# plot(hc.average, main="Average Linkage", xlab="", sub="", cex=.9)
+hclusters = cutree(hc.average, k = 5)
+```
+
+```{r}
+table(hclusters)
+clast = list(hclusters)
+a = unlist(clast, recursive = FALSE)
+```
+
+```{r}
+co$cluster = a
+```
+
