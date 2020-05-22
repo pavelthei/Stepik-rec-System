@@ -1,0 +1,150 @@
+---
+title: "FUNCTION_FULL"
+output: html_document
+---
+
+```{r}
+library(readr)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+```
+
+Достаем данные по курсам и оценкам
+
+```{r}
+require("RPostgreSQL")
+pw <- {
+  'Stepikpa$$word'
+}
+ 
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = 'stepik_api',
+                 host = 'stepik-bd.c2hf8kenf8dw.us-east-1.rds.amazonaws.com', port = 5432,
+                 user = 'stepik_master', password = pw)
+rm(pw)
+courses <- dbGetQuery(con, "SELECT * from courses")
+```
+
+```{r}
+require("RPostgreSQL")
+pw <- {
+  'Stepikpa$$word'
+}
+ 
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = 'stepik_api',
+                 host = 'stepik-bd.c2hf8kenf8dw.us-east-1.rds.amazonaws.com', port = 5432,
+                 user = 'stepik_master', password = pw)
+rm(pw)
+reviews <- dbGetQuery(con, "SELECT * from reviews")
+```
+
+```{r}
+require("RPostgreSQL")
+pw <- {
+  'Stepikpa$$word'
+}
+ 
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = 'stepik_api',
+                 host = 'stepik-bd.c2hf8kenf8dw.us-east-1.rds.amazonaws.com', port = 5432,
+                 user = 'stepik_master', password = pw)
+rm(pw)
+clusters <- dbGetQuery(con, "SELECT * from clusters_new")
+```
+
+Делаем средние оценки по курсам, присоединяем к датасету с курсами
+
+```{r}
+reviews = reviews %>% select(-id)
+reviews$id = reviews$course_id
+cou_with_rev = left_join(courses, reviews, by='id')
+
+cou_with_rev = cou_with_rev %>%
+  group_by(id) %>%
+  mutate(mean_rating = mean(score))
+
+cou_with_rev = cou_with_rev %>%
+  select(-score, -text, -create_date, -course_id, -user_id)
+cou_with_rev = distinct(cou_with_rev)
+
+clusters$id = as.integer(clusters$id)
+cou_with_rev = full_join(clusters, cou_with_rev, by = 'id')
+cou_with_rev = cou_with_rev %>%
+  select(-X1, -title.x)
+cou_with_rev$title = cou_with_rev$title.y
+cou_with_rev = cou_with_rev %>%
+  select(-title.y)
+```
+
+Работа с кластерами: подбираем названия, переносим некоторые курсы в нужные кластеры, объединяем отдельные кластеры
+
+```{r}
+# Здесь происходила замена кластеров отдельных курсов
+clusters %>%
+  filter(cluster_x==2) %>%
+  select(id, title)
+
+index <- clusters$id == 43
+clusters$cluster_x[index] <- 19
+
+clusters_new = clusters
+
+# Здесь кластеры получал новые числовые значения
+clusters_new$cluster_x[clusters_new$cluster_x==21] <- 17
+```
+
+```{r}
+clusters_new %>%
+  filter(cluster_x==12) %>%
+  select(id, title)
+
+clusters_new = clusters_new %>%
+  mutate(theme0 = ifelse(cluster_x == 0, "Языки", NA)) %>%
+  mutate(theme1 = ifelse(cluster_x == 1, "Мусор1", NA)) %>%
+  mutate(theme2 = ifelse(cluster_x == 2, "Математический анализ, статистика", NA)) %>%
+  mutate(theme3 = ifelse(cluster_x == 3, "Огэ, егэ (без математики)", NA)) %>%
+  mutate(theme4 = ifelse(cluster_x == 4, "Школьные предметы ", NA)) %>%         
+  mutate(theme5 = ifelse(cluster_x == 5, "Введение в основы программирования и анализ данных", NA)) %>%               
+  mutate(theme6 = ifelse(cluster_x == 6, "Химия, биология, физика, астрономия, биоинформатика", NA)) %>%          
+  mutate(theme7 = ifelse(cluster_x == 7, "Программирование и анализ данных для продолжающих", NA)) %>%
+  mutate(theme8 = ifelse(cluster_x == 8, "Пдд", NA)) %>%         
+  mutate(theme9 = ifelse(cluster_x == 9, "Экономика, менеджмент", NA)) %>%
+  mutate(theme10 = ifelse(cluster_x == 10, "Правоведение, психология, история", NA)) %>%
+  mutate(theme11 = ifelse(cluster_x == 11, "Школьные курсы и егэ по математике", NA)) %>%
+  mutate(theme12 = ifelse(cluster_x == 12, "Мне повезет", NA)) %>%
+  mutate(theme13 = ifelse(cluster_x == 13, "Мусор2", NA)) %>%
+  mutate(theme14 = ifelse(cluster_x == 14, "Мусор3", NA)) %>%         
+  mutate(theme15 = ifelse(cluster_x == 15, "Курсы на английском языке по разным тематикам", NA)) %>%
+  mutate(theme16 = ifelse(cluster_x == 16, "НКО (некоммерческие организации)", NA)) %>%
+  mutate(theme17 = ifelse(cluster_x == 17, "Обучение, управление (кластер не очень)", NA))
+clusters_new$theme<- with(clusters_new, paste0(theme0, theme1, theme2, theme3, theme4, theme5, theme6, theme7, theme8, theme9, theme10, theme11, theme12, theme13, theme14, theme15, theme16, theme17))
+clusters_new$theme = str_replace_all(clusters_new$theme, "NA", "")
+
+clusters_new = clusters_new %>% select(-theme0, -theme1, -theme2, -theme3, -theme4, -theme5, -theme6, -theme7, -theme8, -theme9, -theme10, -theme11, -theme12, -theme13, -theme14, -theme15, -theme16, -theme17)
+write_csv(clusters_new, 'clusters_new.csv')
+```
+
+
+```{r}
+# От 1 до 4 дней [0; 5760]
+      # От 4 дней до полутора недель [5760; 14400]
+      # От полутора недель до 3 недель [14400; 30240]
+      # От 3 недель до полутора месяцев [30240; 60480]
+      # От полутора месяцев и больше [60480; дальше]
+      cou_with_rev = cou_with_rev %>%
+        mutate(day = ifelse(time_to_complete <= 5760, "От 1 до 4 дней", NA)) %>%
+        mutate(week = ifelse(time_to_complete <= 14400 & time_to_complete > 5760, "От 4 дней до полутора недель", NA)) %>%
+        mutate(two_weeks = ifelse(time_to_complete <= 30240 & time_to_complete > 14400, "От полутора недель до 3 недель", NA)) %>%
+        mutate(month = ifelse(time_to_complete <= 60480 & time_to_complete > 30240, "От 3 недель до полутора месяцев", NA)) %>%
+        mutate(two_months = ifelse(time_to_complete > 60480, "От полутора месяцев и больше", NA))
+
+
+cou_with_rev$time_completion<- with(cou_with_rev, paste0(day,week,two_weeks,month,two_months))
+cou_with_rev$time_completion = str_replace_all(cou_with_rev$time_completion, "NA", "")
+cou_with_rev = cou_with_rev %>%
+  select(-day, -week, -month, -two_weeks, -two_months)
+```
+
+   
