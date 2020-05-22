@@ -49,10 +49,15 @@ getColdStart <- function(coursesId, subjects, time, pay, n){
     recommended = cou_with_rev %>% # cou_with_rev - датасет с курсами + ср оценками + темтиками
       filter(theme == subjects) %>%
       filter(time_completion == time) %>%
-      filter(is_paid == pay) %>%
       arrange(-mean_rating) %>%
       head(n) %>% 
-      select(title)
+      select(title, is_paid)
+    
+    if (!(as.logical(pay))){
+      recommended = recommended %>% filter(is_paid == as.logical(pay)) %>% select(title)
+    } else {
+      recommended = recommended %>% select(title)
+    }
   } 
   return(recommended)
 }
@@ -72,7 +77,7 @@ getCourse <- function(coursesId, n){
                          mean_rating=numeric(), 
                          stringsAsFactors=FALSE) 
       for (i in clusters$cluster_x) {
-        way2matr = paste(paste("~/PROJECT STEPIK/sim", as.character(i), sep=""), ".txt", sep="")
+        way2matr = paste(paste("./mtrx/sim", as.character(i), sep=""), ".txt", sep="")
         sim_i = as.matrix(read.table(way2matr))
         cou_i = cours %>% filter(cluster_x == i)
         # теперь не cours, а курсы принадл к каждому кластеру отдельно
