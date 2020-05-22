@@ -5,7 +5,7 @@ library(markdown)
 library(knitr)
 library(kableExtra)
 
-source("fff.R")
+source("~/Stepik-rec-System/App/futr.r")
 
 ui <- navbarPage(theme = "https://bootswatch.com/3/cyborg/bootstrap.min.css",
                  #position = "fixed-top",
@@ -25,12 +25,12 @@ ui <- navbarPage(theme = "https://bootswatch.com/3/cyborg/bootstrap.min.css",
                                            chooseSliderSkin("Flat"),
                                            setSliderColor(c("#31982B","#31982B", "#31982B"), c(1, 2, 3)),
                                            selectInput("time", NULL, 
-                                                     cou_with_rev$time_completion ,
-                                                     multiple = FALSE),
+                                                       cou_with_rev$time_completion,
+                                                       multiple = FALSE),
                                            'По какой теме вы хотели бы пройти курс?',
                                            selectInput("subjects", NULL, 
-                                                       themesW$theme,
-                                                        multiple = FALSE),
+                                                       cou_with_rev$theme,
+                                                         multiple = FALSE),
                                            'Количество курсов рекоммендуемых для прохождения:',
                                            sliderInput("n_rec", label = NULL, min = 0, 
                                                        max = 10, value = 4),
@@ -39,7 +39,7 @@ ui <- navbarPage(theme = "https://bootswatch.com/3/cyborg/bootstrap.min.css",
                                            
                               mainPanel(
                                 fluidRow(
-                                  tableOutput("value3"))
+                                  tableOutput("value"))
                               ))),
                  
                  
@@ -67,25 +67,22 @@ ui <- navbarPage(theme = "https://bootswatch.com/3/cyborg/bootstrap.min.css",
 
 ####################################################################
 
-
-server <- function(input, output, session) {
+server <- function(input, output) {
+  
   ###new user
-  output$value3 <- function()({
-    input$done
+  output$value <- function()({
+    print(input$done)
     
       if (input$done > 0) 
       {tbl <- isolate({
         
-        subj <- input$subjects
-        print(subj)
-        time <- input$time
-        print(time)
-        pay <- input$pay
-        print(pay)
-        
-        rec <- as.data.frame(getColdStart(subj, time, pay, input$n_rec))
-        knitr::kable(rec, "html", col.names = "Курсы для вас:") %>%
-          kable_styling("striped", full_width = FALSE)
+
+        #pay <- input$pay
+        #input <- input$subjects
+        #time <- input$time
+        #rec <- as.data.frame(getCourse(0, input$n_rec))
+        #knitr::kable(rec, "html", col.names = "Курсы для вас:") %>%
+          #kable_styling("striped", full_width = FALSE)
         
         
       })
@@ -97,9 +94,9 @@ server <- function(input, output, session) {
   
   ###login
   output$value2 <- function()({
-    input$done2
+    print(input$done2)
     if (input$done2 > 0) 
-    {tbl2 <- isolate({
+    {tbl <- isolate({
       
       crsId <- filter(cou_with_rev, title == input$subjects2)
       rec2 <- as.data.frame(getCourse(crsId$id, input$n_rec2))

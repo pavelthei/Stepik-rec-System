@@ -5,7 +5,7 @@ library(markdown)
 library(knitr)
 library(kableExtra)
 
-source("~/PROJECT STEPIK/futr.r")
+source("futr2.r")
 
 ui <- navbarPage(theme = "https://bootswatch.com/3/cyborg/bootstrap.min.css",
                  #position = "fixed-top",
