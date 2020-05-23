@@ -1,0 +1,94 @@
+---
+title: "EDA"
+author: '---'
+date: "23 05 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+require("RPostgreSQL")
+pw <- {
+  'Stepikpa$$word'
+}
+ 
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = 'stepik_api',
+                 host = 'stepik-bd.c2hf8kenf8dw.us-east-1.rds.amazonaws.com', port = 5432,
+                 user = 'stepik_master', password = pw)
+rm(pw)
+courses <- dbGetQuery(con, "SELECT * from courses")
+reviews <- dbGetQuery(con, "SELECT * from reviews")
+users <- dbGetQuery(con, "SELECT * from users")
+```
+
+```{r}
+df_courses <- read_csv('courses.csv')
+df_reviews <- read_csv('reviews.csv')
+df_users <- read_csv('users.csv')
+```
+<b>Первый</b> датасет содерржит информацию о курсах, ниже представлено описание фич
+```{r}
+df_courses
+```
+
+<b>Второй</b> датасет содерржит информацию об отзывах пользователей
+```{r}
+df_reviews
+```
+
+<b>Третий</b> датасет содерржит информацию о пользователях
+```{r}
+df_users
+```
+
+Посмотрим на распределение оценок пользователей в сете с отзывами
+
+```{r}
+hist(reviews$score, main = "Распределение оценок пользоватлелей", xlab = 'Оценка', ylab = 'Частота')
+```
+
+Приимущественно встресаются положительные оценки 
+
+Теперь посмотрим на распределение количества заданий в курсах
+
+```{r}
+hist(courses$quizzes_count, main = "Количество заданий в курсе", xlab = 'Количество', ylab = 'Частота')
+```
+```{r}
+paste('Среднее количество заданий в курсе: ',mean(courses$quizzes_count))
+paste('Cреднее медианное количество заданий в курсе: ',median(courses$quizzes_count))
+```
+
+В среднем у каждого курса 5560 слушатаелй 
+```{r}
+summary(courses$learners_count)
+```
+
+```{r}
+ggplot() + 
+  geom_histogram(aes(courses$schedule_type), stat = "count") + 
+  xlab('Тип курса')+
+  ylab('Количество')+ 
+  ggtitle('Распределение курсов по типу')
+```
+Большее количество курсов расчитано на самообучение, это удобно ведь пользователь может проходить курс когда ему удобно
+
+
+```{r}
+ggplot() + 
+  geom_histogram(aes(courses$language), stat = "count") + 
+  xlab('Язык')+
+  ylab('Количество')+ 
+  ggtitle('Распределение курсов по языку')
+```
+Преобладающий язык Русский курсы на других языках встречаются реже
