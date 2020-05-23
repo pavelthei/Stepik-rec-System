@@ -13,7 +13,7 @@ drv <- dbDriver("PostgreSQL")
 con <- dbConnect(drv, dbname = 'stepik_api',
                  host = 'stepik-bd.c2hf8kenf8dw.us-east-1.rds.amazonaws.com', port = 5432, user = 'stepik_master', password = pw)
 rm(pw)
-cou_with_rev <- dbGetQuery(con, "SELECT * from courses_cluster")
+cou_with_rev <- dbGetQuery(con, "SELECT * FROM courses_cluster LEFT JOIN courses_cover ON courses_cluster.id = courses_cover.course_id")
 dbDisconnect(con)
 
 cou_with_rev <- as.data.frame(cou_with_rev)
@@ -54,18 +54,19 @@ getColdStart <- function(coursesId, subjects, time, pay, n){
     
     # pay - выбора пользователя для платного/бесплатного курса. Вводит да/нет на вопрос "Готовы ли Вы платить за прохождение курса?". Надо чтобы ответ был переформатирован в TRUE/FALSE
     
-    recommended = cou_with_rev %>% # cou_with_rev - датасет с курсами + ср оценками + темтиками
+    if (!(as.logical(pay))){
+      recommended = cou_with_rev %>% filter(is_paid == as.logical(pay))
+    } else {
+      recommended = cou_with_rev 
+    }
+    
+    recommended = recommended %>% # cou_with_rev - датасет с курсами + ср оценками + темтиками
       filter(theme == subjects) %>%
       filter(time_completion == time) %>%
       arrange(-mean_rating) %>%
       head(n) %>% 
-      select(title, is_paid)
+      select(title, is_paid, id, cover)
     
-    if (!(as.logical(pay))){
-      recommended = recommended %>% filter(is_paid == as.logical(pay)) %>% select(title)
-    } else {
-      recommended = recommended %>% select(title)
-    }
   } 
   return(recommended)
 }
@@ -83,7 +84,8 @@ getCourse <- function(coursesId, n){
       recs <- data.frame(id = integer(),
                          title=character(), 
                          mean_rating=numeric(), 
-                         stringsAsFactors=FALSE) 
+                         stringsAsFactors=FALSE,
+                         cover=character()) 
       for (i in clusters$cluster_x) {
         way2matr = paste(paste("./mtrx/sim", as.character(i), sep=""), ".txt", sep="")
         sim_i = as.matrix(read.table(way2matr))
@@ -96,14 +98,15 @@ getCourse <- function(coursesId, n){
         a = which(sim_i[,paste("X", as.character(cou_i$id), sep="")] %in% mostSimilar, arr.ind = TRUE)
         rows = a %% dim(sim_i)[1]
         result = rownames(sim_i)[rows]
-        recommend_i = filter(cou_with_rev,id %in% result) %>% dplyr::select(id, title, mean_rating)
+        recommend_i = filter(cou_with_rev,id %in% result) %>% dplyr::select(id, title, mean_rating, cover)
         # хотим рекомендовать пропорциональное количество курсов из каждого кластера
         # list_recom = append(list_recom, recommend_i)
         recs = rbind(recs, recommend_i)
       }
+      print(recs)
       # recom <- data.frame(matrix(unlist(list_recom), nrow=length(list_recom), byrow=T),stringsAsFactors=FALSE)
       # recom2 <- as.data.frame(t(as.matrix(recom))) 
-      recommended = recs %>% arrange(-mean_rating) %>% head(n) %>% select(title)
+      recommended = recs %>% arrange(-mean_rating) %>% head(n) %>% select(title, id, cover)
     }
     
   }else{
@@ -112,4 +115,5 @@ getCourse <- function(coursesId, n){
     } 
   }
   return(recommended)
+  print(recommended)
 }
