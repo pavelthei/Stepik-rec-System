@@ -11,24 +11,54 @@ ui <- navbarPage(theme = "https://bootswatch.com/3/cyborg/bootstrap.min.css",
                  #position = "fixed-top",
                  "Stepik RecSys",
                  tabPanel("Home",
-                          h3("Привет!", align = "left"),
-                          h5("Представляем Вам нашу рекомендательную систему, которая подберет для Вас курсы на Stepik,
-исходя из Ваших предпочтений.", align = "left"),
+                          tags$div(class="header", checked=NA,
+                                   tags$p("Привет!", align = "left", style="color:white; font-size: 40px"), align = "left", style = "background: black; width: 18%"),
+                          #h3("Привет!", align = "left",style="color:black"),
+                          tags$div(class="header", checked=NA,
+                                   tags$p("Представляем Вам нашу рекомендательную систему, которая подберет для Вас курсы на Stepik,
+исходя из Ваших предпочтений.", align = "left", style="color:white; font-size: 25px"), align = "left", style = "background: black; width: 100%"),
+#h5("Представляем Вам нашу рекомендательную систему, которая подберет для Вас курсы на Stepik,
+#исходя из Ваших предпочтений.", align = "left",style="color:black"),
                           br(),
-                          h4("Если Вы еще не проходили курсы на Stepik, то выбирайте вкладку «New user»:
-проходите небольшой опрос и готовьтесь получать новые знания!", align = "left"),
+                          tags$div(class="header", checked=NA,
+                          tags$p("Если Вы еще не проходили курсы на Stepik, то выбирайте вкладку «New user»: проходите небольшой опрос и готовьтесь получать новые знания!", 
+                                 align = "left", style="color:white; font-size: 22px"), align = "left", style = "background: black; width: 90%"),
+                          
+#h4("Если Вы еще не проходили курсы на Stepik, то выбирайте вкладку «New user»:
+#проходите небольшой опрос и готовьтесь получать новые знания!", align = "left",style="color:black"),
                           br(),
-                          h4("Если же Вы уже были студентом некоторых курсов данной платформы,
-то переходите на вкладку «Login», вводите свои любимые курсы, а все остальное мы сделаем за Вас.", align = "left"),
+                          tags$div(class="header", checked=NA,
+                          tags$p("Если же Вы уже были студентом некоторых курсов данной платформы, то переходите на вкладку «Login», вводите свои любимые курсы, а все остальное мы сделаем за Вас.", 
+                                 align = "left", style="color:white; font-size: 22px"), align = "left", style = "background: black; width: 90%"),
+                          
+#h4("Если же Вы уже были студентом некоторых курсов данной платформы,
+#то переходите на вкладку «Login», вводите свои любимые курсы, а все остальное мы сделаем за Вас.", align = "left",style="color:black"),
                           br(),
-                          h6("Рекомендательную систему сделали:", align = "left"),
-                          h5("Елизаров Павел, ОП Экономика;", align = "left"),
-                          h5("Леонова Александра, ОП Экономика;", align = "left"),
-                          h5("Сергеева Арина, ОП Социология;", align = "left"),
-                          h5("Быков Юрий, ОП Менеджмент", align = "left")
+                          tags$div(class="header", checked=NA,
+                          tags$p("Рекомендательную систему сделали:", align = "left", style="color:white; font-size: 20px"), align = "left", style = "background: black; width: 45%"),
+                          
+#h5("Рекомендательную систему сделали:", align = "left",style="color:black"),
+                          tags$div(class="header", checked=NA,
+                          tags$p("Елизаров Павел, ОП Экономика;", align = "left", style="color:white; font-size: 18px"), align = "left", style = "background: black; width: 35%"),
+                          
+                          tags$div(class="header", checked=NA,
+                          tags$p("Леонова Александра, ОП Экономика;", align = "left", style="color:white; font-size: 18px"), align = "left", style = "background: black; width: 40%"),
+
+                          tags$div(class="header", checked=NA,
+                          tags$p("Сергеева Арина, ОП Социология;", align = "left", style="color:white; font-size: 18px"), align = "left", style = "background: black; width: 35%"),
+
+                          tags$div(class="header", checked=NA,
+                          tags$p("Быков Юрий, ОП Менеджмент", align = "left", style="color:white; font-size: 18px"), align = "left", style = "background: black; width: 35%"),
+#h6("Елизаров Павел, ОП Экономика;", align = "left",style="color:black"),
+#h6("Леонова Александра, ОП Экономика;", align = "left",style="color:black"),
+#h6("Сергеева Арина, ОП Социология;", align = "left",style="color:black"),
+#h6("Быков Юрий, ОП Менеджмент", align = "left",style="color:black")
                           
                  ),
                  
+                 tags$head(
+                   tags$style(HTML("body{ 
+                background-image: url( https://sun9-67.userapi.com/c206816/v206816696/12679a/Rp7nS58YEa4.jpg );}"))),
                  
                  tabPanel("New user",
                           sidebarLayout(
