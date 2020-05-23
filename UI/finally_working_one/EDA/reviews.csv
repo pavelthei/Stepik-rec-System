@@ -1,7 +1,0 @@
-Feature ,Description
-course_id,ID курса на который написано отзыв 
-user_id, ID пользователя 
-score,Оценка курсу  
-text,Текст отзыва 
-create_date,Дата создания
-id,ID отзыва 
