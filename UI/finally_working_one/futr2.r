@@ -87,7 +87,7 @@ getCourse <- function(coursesId, n){
                          stringsAsFactors=FALSE,
                          cover=character()) 
       for (i in clusters$cluster_x) {
-        way2matr = paste(paste("./mtrx/sim", as.character(i), sep=""), ".txt", sep="")
+        way2matr = paste(paste("./check_mtrx/sim", as.character(i), sep=""), ".txt", sep="")
         sim_i = as.matrix(read.table(way2matr))
         cou_i = cours %>% filter(cluster_x == i)
         # теперь не cours, а курсы принадл к каждому кластеру отдельно
