@@ -32,6 +32,14 @@ input <- 0
 time <- 0
 pay <- 0
 ################################
+time = c('От 1 до 4 дней', 'От 4 дней до полутора недель', 'От полутора недель до 3 недель', 'От 3 недель до полутора месяцев', 'От полутора месяцев и больше')
+m1 <- matrix(time, ncol=1, byrow=TRUE)
+d1 <- as.data.frame(m1, stringsAsFactors=FALSE)
+d1$time = d1$V1
+times = d1 %>%
+  select(-V1)
+
+################################
 getColdStart <- function(coursesId, subjects, time, pay, n){
   if (length(coursesId) == 0) {
     # input - переменная выбора пользователя для тематики курса
