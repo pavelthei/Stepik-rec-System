@@ -1,6 +1,5 @@
 *.csv
 *.xlsx
-*.ipynb
 .Rproj.user
 .idea
 *.ipynb_checkpoints
