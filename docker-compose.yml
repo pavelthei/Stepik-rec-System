@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+
+  posgres_db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: stepik_password
+      POSTGRES_USER: root
+      POSTGRES_DB: stepik_api
+    ports:
+      - 5432:5432
+    volumes:
+      - ./db_init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  shiny-app:
+    build: ./App/
+    volumes:
+      - ./App/:/srv/shiny-server/
+    ports:
+      - 3838:3838

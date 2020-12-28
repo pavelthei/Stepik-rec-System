@@ -5,8 +5,6 @@ import argparse
 import psycopg2
 import logging
 from datetime import datetime
-import os
-import json
 import time
 
 
